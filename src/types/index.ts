@@ -1,64 +1,56 @@
-export type Frequency = "WEEKLY" | "MONTHLY" | "YEARLY";
-
 export interface Category {
   id: string;
   name: string;
-  color?: string;
-  icon?: string;
-  createdAt?: string;
+  color?: string | null;
+  icon?: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 export interface Expense {
   id: string;
-  title: string;
   amount: number;
-  date: string;
+  description: string;
+  date: Date | string;
   categoryId: string;
   category?: Category;
-  notes?: string;
-  createdAt?: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
-export interface RecurringExpense {
+export interface Budget {
   id: string;
-  title: string;
-  amount: number;
   categoryId: string;
-  category?: Category;
-  frequency: Frequency;
-  nextDueDate: string;
-  isActive: boolean;
-  createdAt?: string;
+  amount: number;
+  month: Date | string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
-export interface CreateExpenseInput {
-  title: string;
-  amount: number;
-  date: string;
-  categoryId: string;
-  notes?: string;
+export interface BudgetWithCategory extends Budget {
+  category: Category;
 }
 
-export interface CreateRecurringExpenseInput {
-  title: string;
-  amount: number;
-  categoryId: string;
-  frequency: Frequency;
-  nextDueDate: string;
+export interface BudgetProgress {
+  budget: BudgetWithCategory | null;
+  category: Category;
+  spent: number;
+  limit: number;
+  remaining: number;
+  percentage: number;
+  isOverBudget: boolean;
+  hasbudget: boolean;
 }
 
-export interface UpdateRecurringExpenseInput {
-  title?: string;
+export interface CreateBudgetInput {
+  categoryId: string;
+  amount: number;
+  month: string;
+}
+
+export interface UpdateBudgetInput {
   amount?: number;
-  categoryId?: string;
-  frequency?: Frequency;
-  nextDueDate?: string;
-  isActive?: boolean;
-}
-
-export interface ProcessRecurringResult {
-  processed: number;
-  expenses: Expense[];
+  month?: string;
 }
 
 export interface ApiResponse<T> {
@@ -67,17 +59,35 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
-export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  pageSize: number;
+export interface MonthlyExpenseSummary {
+  categoryId: string;
+  categoryName: string;
+  totalSpent: number;
+  transactionCount: number;
 }
 
-export interface DashboardStats {
-  totalExpenses: number;
-  totalAmount: number;
-  averageAmount: number;
-  topCategory?: Category;
-  recentExpenses: Expense[];
+export type ProgressBarColor = "green" | "yellow" | "red";
+
+export function getProgressColor(percentage: number): ProgressBarColor {
+  if (percentage >= 100) return "red";
+  if (percentage >= 75) return "yellow";
+  return "green";
+}
+
+export function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+export function getMonthString(date: Date = new Date()): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export function parseMonthString(monthStr: string): Date {
+  const [year, month] = monthStr.split("-").map(Number);
+  return new Date(year, month - 1, 1);
 }
