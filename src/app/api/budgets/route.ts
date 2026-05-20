@@ -1,21 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const monthParam = searchParams.get('month');
+    const monthParam = searchParams.get("month");
 
-    // Default to current month if not provided
-    const now = monthParam ? new Date(monthParam) : new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    let targetDate: Date;
+    if (monthParam) {
+      targetDate = new Date(monthParam);
+    } else {
+      targetDate = new Date();
+    }
+
+    const year = targetDate.getFullYear();
+    const month = targetDate.getMonth();
+
+    const monthStart = new Date(year, month, 1);
+    const monthEnd = new Date(year, month + 1, 1);
 
     const budgets = await prisma.budget.findMany({
       where: {
         month: {
-          gte: startOfMonth,
-          lte: endOfMonth,
+          gte: monthStart,
+          lt: monthEnd,
         },
       },
       include: {
@@ -23,53 +31,16 @@ export async function GET(request: NextRequest) {
       },
       orderBy: {
         category: {
-          name: 'asc',
+          name: "asc",
         },
       },
     });
 
-    // Also get all categories to show ones without budgets
-    const categories = await prisma.category.findMany({
-      orderBy: { name: 'asc' },
-    });
-
-    // Get expenses for this month grouped by category
-    const expenses = await prisma.expense.groupBy({
-      by: ['categoryId'],
-      where: {
-        date: {
-          gte: startOfMonth,
-          lte: endOfMonth,
-        },
-      },
-      _sum: {
-        amount: true,
-      },
-    });
-
-    const expenseMap = new Map(
-      expenses.map((e) => [e.categoryId, e._sum.amount ?? 0])
-    );
-
-    const budgetMap = new Map(budgets.map((b) => [b.categoryId, b]));
-
-    const result = categories.map((category) => {
-      const budget = budgetMap.get(category.id) ?? null;
-      const spent = expenseMap.get(category.id) ?? 0;
-      return {
-        category,
-        budget,
-        spent,
-        remaining: budget ? budget.amount - spent : null,
-        percentage: budget && budget.amount > 0 ? (spent / budget.amount) * 100 : null,
-      };
-    });
-
-    return NextResponse.json({ data: result, month: startOfMonth.toISOString() });
+    return NextResponse.json(budgets);
   } catch (error) {
-    console.error('GET /api/budgets error:', error);
+    console.error("Error fetching budgets:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch budgets' },
+      { error: "Failed to fetch budgets" },
       { status: 500 }
     );
   }
@@ -80,45 +51,50 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { categoryId, amount, month } = body;
 
-    if (!categoryId || amount === undefined || amount === null) {
+    if (!categoryId || amount === undefined || amount === null || !month) {
       return NextResponse.json(
-        { error: 'categoryId and amount are required' },
+        { error: "categoryId, amount, and month are required" },
         { status: 400 }
       );
     }
 
-    if (typeof amount !== 'number' || amount < 0) {
+    if (typeof amount !== "number" || amount < 0) {
       return NextResponse.json(
-        { error: 'amount must be a non-negative number' },
+        { error: "amount must be a non-negative number" },
         { status: 400 }
       );
     }
 
-    // Parse month or default to current month
-    const targetDate = month ? new Date(month) : new Date();
-    const startOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
+    const monthDate = new Date(month);
+    if (isNaN(monthDate.getTime())) {
+      return NextResponse.json(
+        { error: "Invalid month format" },
+        { status: 400 }
+      );
+    }
 
-    // Verify category exists
+    const year = monthDate.getFullYear();
+    const monthIndex = monthDate.getMonth();
+    const normalizedMonth = new Date(year, monthIndex, 1);
+    const nextMonth = new Date(year, monthIndex + 1, 1);
+
     const category = await prisma.category.findUnique({
       where: { id: categoryId },
     });
 
     if (!category) {
       return NextResponse.json(
-        { error: 'Category not found' },
+        { error: "Category not found" },
         { status: 404 }
       );
     }
-
-    // Upsert: create or update budget for this category+month
-    const endOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59, 999);
 
     const existingBudget = await prisma.budget.findFirst({
       where: {
         categoryId,
         month: {
-          gte: startOfMonth,
-          lte: endOfMonth,
+          gte: normalizedMonth,
+          lt: nextMonth,
         },
       },
     });
@@ -127,25 +103,34 @@ export async function POST(request: NextRequest) {
     if (existingBudget) {
       budget = await prisma.budget.update({
         where: { id: existingBudget.id },
-        data: { amount },
-        include: { category: true },
+        data: {
+          amount,
+          updatedAt: new Date(),
+        },
+        include: {
+          category: true,
+        },
       });
     } else {
       budget = await prisma.budget.create({
         data: {
           categoryId,
           amount,
-          month: startOfMonth,
+          month: normalizedMonth,
         },
-        include: { category: true },
+        include: {
+          category: true,
+        },
       });
     }
 
-    return NextResponse.json({ data: budget }, { status: existingBudget ? 200 : 201 });
+    return NextResponse.json(budget, {
+      status: existingBudget ? 200 : 201,
+    });
   } catch (error) {
-    console.error('POST /api/budgets error:', error);
+    console.error("Error creating/updating budget:", error);
     return NextResponse.json(
-      { error: 'Failed to create or update budget' },
+      { error: "Failed to create or update budget" },
       { status: 500 }
     );
   }
