@@ -3,112 +3,102 @@ import React from 'react';
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { DollarSign, LayoutDashboard, Tags, PieChart, Menu, X } from "lucide-react";
+import { useState } from "react";
 
 const navLinks = [
-  { href: "/", label: "Dashboard" },
-  { href: "/expenses", label: "Expenses" },
-  { href: "/categories", label: "Categories" },
-  { href: "/recurring", label: "Recurring" },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/expenses", label: "Expenses", icon: DollarSign },
+  { href: "/categories", label: "Categories", icon: Tags },
+  { href: "/budgets", label: "Budgets", icon: PieChart },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const isActive = (href: string) => {
+    if (href === "/") return pathname === "/";
+    return pathname.startsWith(href);
+  };
 
   return (
-    <nav
-      style={{ backgroundColor: "#0f0f11" }}
-      className="border-b border-gray-800 sticky top-0 z-50 shadow-lg"
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo / Brand */}
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center shadow-md shadow-orange-500/30">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-5 h-5 text-white"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="12" y1="1" x2="12" y2="23" />
-                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-              </svg>
+    <nav className="sticky top-0 z-50 w-full border-b border-white/10 bg-[#0f0f11]/90 backdrop-blur-md shadow-lg">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between">
+          {/* Logo */}
+          <Link
+            href="/"
+            className="flex items-center gap-2 group"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500 shadow-md shadow-orange-500/30 group-hover:bg-orange-400 transition-colors duration-200">
+              <DollarSign className="h-5 w-5 text-white" />
             </div>
-            <span className="text-white font-bold text-lg tracking-tight">
+            <span className="text-lg font-bold text-white tracking-tight">
               Expense<span className="text-orange-500">Tracker</span>
             </span>
+          </Link>
+
+          {/* Desktop Nav Links */}
+          <div className="hidden md:flex items-center gap-1">
+            {navLinks.map(({ href, label, icon: Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  isActive(href)
+                    ? "bg-orange-500/15 text-orange-400 shadow-sm"
+                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <Icon
+                  className={`h-4 w-4 ${
+                    isActive(href) ? "text-orange-400" : "text-gray-500"
+                  }`}
+                />
+                {label}
+                {isActive(href) && (
+                  <span className="ml-1 h-1.5 w-1.5 rounded-full bg-orange-500 inline-block" />
+                )}
+              </Link>
+            ))}
           </div>
 
-          {/* Nav Links */}
-          <div className="hidden sm:flex items-center gap-1">
-            {navLinks.map((link) => {
-              const isActive =
-                link.href === "/"
-                  ? pathname === "/"
-                  : pathname.startsWith(link.href);
-
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`
-                    relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
-                    ${
-                      isActive
-                        ? "text-orange-500 bg-orange-500/10"
-                        : "text-gray-400 hover:text-white hover:bg-white/5"
-                    }
-                  `}
-                >
-                  {link.label}
-                  {isActive && (
-                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-orange-500" />
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* Mobile Menu */}
-          <div className="sm:hidden flex items-center">
-            <MobileMenu pathname={pathname} />
-          </div>
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setMobileOpen((prev) => !prev)}
+            className="md:hidden flex items-center justify-center h-9 w-9 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors duration-200"
+            aria-label="Toggle menu"
+          >
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
       </div>
-    </nav>
-  );
-}
 
-function MobileMenu({ pathname }: { pathname: string }) {
-  return (
-    <div className="flex gap-1 overflow-x-auto">
-      {navLinks.map((link) => {
-        const isActive =
-          link.href === "/"
-            ? pathname === "/"
-            : pathname.startsWith(link.href);
-
-        return (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={`
-              px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all duration-200
-              ${
-                isActive
-                  ? "text-orange-500 bg-orange-500/10"
+      {/* Mobile Dropdown */}
+      {mobileOpen && (
+        <div className="md:hidden border-t border-white/10 bg-[#0f0f11] px-4 py-3 space-y-1">
+          {navLinks.map(({ href, label, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              onClick={() => setMobileOpen(false)}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                isActive(href)
+                  ? "bg-orange-500/15 text-orange-400"
                   : "text-gray-400 hover:text-white hover:bg-white/5"
-              }
-            `}
-          >
-            {link.label}
-          </Link>
-        );
-      })}
-    </div>
+              }`}
+            >
+              <Icon
+                className={`h-4 w-4 ${
+                  isActive(href) ? "text-orange-400" : "text-gray-500"
+                }`}
+              />
+              {label}
+            </Link>
+          ))}
+        </div>
+      )}
+    </nav>
   );
 }
