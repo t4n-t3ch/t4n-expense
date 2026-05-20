@@ -8,38 +8,35 @@ datasource db {
 }
 
 model Category {
-  id                String             @id @default(cuid())
-  name              String             @unique
-  color             String             @default("#f97316")
-  createdAt         DateTime           @default(now())
-  expenses          Expense[]
-  recurringExpenses RecurringExpense[]
+  id        String    @id @default(cuid())
+  name      String    @unique
+  color     String    @default("#f97316")
+  icon      String    @default("tag")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  expenses  Expense[]
+  budgets   Budget[]
 }
 
 model Expense {
   id          String   @id @default(cuid())
-  title       String
   amount      Float
-  categoryId  String
-  category    Category @relation(fields: [categoryId], references: [id])
+  description String
   date        DateTime @default(now())
-  createdAt   DateTime @default(now())
-}
-
-enum Frequency {
-  WEEKLY
-  MONTHLY
-  YEARLY
-}
-
-model RecurringExpense {
-  id          String    @id @default(cuid())
-  title       String
-  amount      Float
   categoryId  String
-  category    Category  @relation(fields: [categoryId], references: [id])
-  frequency   Frequency
-  nextDueDate DateTime
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Budget {
+  id         String   @id @default(cuid())
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  amount     Float
+  month      DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([categoryId, month])
 }
