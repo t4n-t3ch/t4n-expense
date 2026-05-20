@@ -1,20 +1,6 @@
-// src/app/api/recurring/[id]/route.ts
+// src/app/api/budgets/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { addDays } from "date-fns";
-
-function getNextDueDate(current: Date, frequency: string): Date {
-  switch (frequency) {
-    case "WEEKLY":
-      return addDays(current, 7);
-    case "MONTHLY":
-      return addDays(current, 30);
-    case "YEARLY":
-      return addDays(current, 365);
-    default:
-      return addDays(current, 30);
-  }
-}
 
 export async function PATCH(
   request: NextRequest,
@@ -23,52 +9,50 @@ export async function PATCH(
   try {
     const { id } = params;
     const body = await request.json();
+    const { amount } = body;
 
-    const existing = await prisma.recurringExpense.findUnique({
+    if (amount === undefined || amount === null) {
+      return NextResponse.json(
+        { error: "Amount is required" },
+        { status: 400 }
+      );
+    }
+
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount < 0) {
+      return NextResponse.json(
+        { error: "Amount must be a non-negative number" },
+        { status: 400 }
+      );
+    }
+
+    const existingBudget = await prisma.budget.findUnique({
       where: { id },
     });
 
-    if (!existing) {
+    if (!existingBudget) {
       return NextResponse.json(
-        { error: "Recurring expense not found" },
+        { error: "Budget not found" },
         { status: 404 }
       );
     }
 
-    const updateData: Record<string, unknown> = {};
-
-    if (typeof body.isActive === "boolean") {
-      updateData.isActive = body.isActive;
-    }
-    if (body.title !== undefined) {
-      updateData.title = body.title;
-    }
-    if (body.amount !== undefined) {
-      updateData.amount = parseFloat(body.amount);
-    }
-    if (body.categoryId !== undefined) {
-      updateData.categoryId = body.categoryId;
-    }
-    if (body.frequency !== undefined) {
-      updateData.frequency = body.frequency;
-    }
-    if (body.nextDueDate !== undefined) {
-      updateData.nextDueDate = new Date(body.nextDueDate);
-    }
-
-    const updated = await prisma.recurringExpense.update({
+    const updatedBudget = await prisma.budget.update({
       where: { id },
-      data: updateData,
+      data: {
+        amount: parsedAmount,
+        updatedAt: new Date(),
+      },
       include: {
         category: true,
       },
     });
 
-    return NextResponse.json(updated);
+    return NextResponse.json(updatedBudget);
   } catch (error) {
-    console.error("Error updating recurring expense:", error);
+    console.error("Error updating budget:", error);
     return NextResponse.json(
-      { error: "Failed to update recurring expense" },
+      { error: "Failed to update budget" },
       { status: 500 }
     );
   }
@@ -81,26 +65,29 @@ export async function DELETE(
   try {
     const { id } = params;
 
-    const existing = await prisma.recurringExpense.findUnique({
+    const existingBudget = await prisma.budget.findUnique({
       where: { id },
     });
 
-    if (!existing) {
+    if (!existingBudget) {
       return NextResponse.json(
-        { error: "Recurring expense not found" },
+        { error: "Budget not found" },
         { status: 404 }
       );
     }
 
-    await prisma.recurringExpense.delete({
+    await prisma.budget.delete({
       where: { id },
     });
 
-    return NextResponse.json({ message: "Recurring expense deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting recurring expense:", error);
     return NextResponse.json(
-      { error: "Failed to delete recurring expense" },
+      { message: "Budget deleted successfully" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error deleting budget:", error);
+    return NextResponse.json(
+      { error: "Failed to delete budget" },
       { status: 500 }
     );
   }
