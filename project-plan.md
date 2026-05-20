@@ -1,16 +1,16 @@
 Edit Plan
 
-1. prisma/schema.prisma — EDIT: Add Budget model with fields id, categoryId, amount, month (DateTime), createdAt, updatedAt, and a relation to the existing Category model
-2. src/app/api/budgets/route.ts — NEW: Create GET handler to list all budgets for current month and POST handler to create or update a budget for a category/month using Prisma
-3. src/app/api/budgets/[id]/route.ts — NEW: Create PATCH handler to update a budget amount and DELETE handler to remove a budget by id using Prisma
-4. src/app/budgets/page.tsx — NEW: Create full budget dashboard page showing each category with budget limit, total spent this month, visual progress bar, remaining amount, and Edit Budget button
-5. src/components/ui/budget-form.tsx — NEW: Create modal form component with category dropdown, amount limit input, and month selector for setting or editing a budget limit
-6. src/components/ui/budget-progress-bar.tsx — NEW: Create reusable progress bar component accepting spent and limit props, rendering colored bar (green under 75%, yellow 75-99%, red over 100%) with percentage label
-7. src/components/navbar.tsx — EDIT: Add a Budgets nav link alongside existing navigation links pointing to /budgets
-8. src/lib/prisma.ts — EDIT: Verify Prisma client singleton is exported correctly to support new Budget model queries (no breaking changes, confirm compatibility)
-9. src/types/index.ts — EDIT: Add Budget, BudgetWithCategory, and BudgetProgress TypeScript interfaces/types to support the new budget feature across components and API routes
-10. src/app/api/budgets/route.ts — (covered in #2, placeholder to note: include month-based filtering logic using startOf/endOf month DateTime range in GET handler)
-11. src/lib/budget-utils.ts — NEW: Create utility functions for calculating budget progress percentage, determining color thresholds, and formatting remaining/overspent amounts
-12. src/app/budgets/loading.tsx — NEW: Create loading skeleton UI for the budgets page to handle async data fetching states gracefully
-13. src/app/budgets/error.tsx — NEW: Create error boundary component for the budgets page to handle API or data fetching failures with a user-friendly message
-14. prisma/migrations — EDIT: Note that after updating schema.prisma, run prisma migrate dev to generate migration file for the new Budget model (document migration command in a README or migration note)
+1. src/app/analytics/page.tsx — NEW: Full analytics dashboard page showing donut chart for category spending, line chart for 6-month trend, top 5 expenses table, and month-over-month comparison table with color-coded % change indicators
+2. src/app/api/analytics/summary/route.ts — NEW: GET handler returning total spent per category for current month, monthly totals for last 6 months, and top 5 expenses, all computed via Prisma queries with month query param support
+3. src/components/ui/donut-chart.tsx — NEW: Reusable SVG-based donut chart component accepting array of {label, value, color} data points, rendering donut segments with center total and a color-coded legend
+4. src/components/ui/line-chart.tsx — NEW: Reusable SVG-based line chart component accepting monthly totals data, rendering a trend line with filled area, month labels on x-axis, amount values on y-axis, and hover tooltips
+5. src/components/ui/stat-card.tsx — NEW: Reusable card component displaying a metric label, formatted value, and optional trend indicator with up/down arrow icon and color-coded percentage change (green for down, red for up)
+6. src/components/navbar.tsx — EDIT: Add 'Analytics' nav link pointing to /analytics alongside existing Budgets and other navigation links
+7. src/lib/analytics.ts — NEW: Utility functions for computing analytics data including category aggregations, monthly totals calculation, and top expenses extraction to keep route handler clean
+8. src/types/analytics.ts — NEW: TypeScript interfaces for analytics data structures including CategorySpend, MonthlyTotal, TopExpense, MonthComparison, and AnalyticsSummaryResponse
+9. src/app/analytics/loading.tsx — NEW: Loading skeleton UI for the analytics dashboard page showing placeholder cards and chart skeletons while data fetches
+10. src/app/analytics/error.tsx — NEW: Error boundary component for the analytics page that displays a user-friendly error message with retry option
+11. src/components/ui/month-comparison-table.tsx — NEW: Reusable table component displaying category spend vs last month with formatted amounts and color-coded percentage change indicators
+12. src/components/ui/top-expenses-list.tsx — NEW: Reusable component rendering the top 5 largest individual expenses with category badge, description, date, and formatted amount
+13. src/lib/format.ts — NEW: Utility functions for formatting currency amounts, percentages, and month labels consistently across analytics components
+14. src/app/api/analytics/summary/route.test.ts — NEW: Basic test stubs and type validation for the analytics summary API route to ensure correct response shape and Prisma query structure
