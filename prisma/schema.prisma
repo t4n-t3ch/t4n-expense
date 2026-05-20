@@ -1,0 +1,45 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id                String             @id @default(cuid())
+  name              String             @unique
+  color             String             @default("#f97316")
+  createdAt         DateTime           @default(now())
+  expenses          Expense[]
+  recurringExpenses RecurringExpense[]
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  title       String
+  amount      Float
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+}
+
+enum Frequency {
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+model RecurringExpense {
+  id          String    @id @default(cuid())
+  title       String
+  amount      Float
+  categoryId  String
+  category    Category  @relation(fields: [categoryId], references: [id])
+  frequency   Frequency
+  nextDueDate DateTime
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+}
